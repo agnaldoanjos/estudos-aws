@@ -1,10 +1,12 @@
 package com.sample.demo.aws.controller;
 
+import com.sample.demo.aws.dto.BachtReplicationDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import software.amazon.awssdk.services.s3control.S3ControlClient;
@@ -20,17 +22,8 @@ public class ClientAWSController {
 
     private final S3ControlClient s3Control;
 
-    @Value("${s3.account.id}")
-    private final String accountId;
-
-    @Value("${s3.bucket.source}")
-    private final String bucketSource;
-
-    @Value("${s3.bucket.inventory}")
-    private final String bucketInventory;
-
     @PostMapping("/sync")
-    public ResponseEntity<String> replication() {
+    public ResponseEntity<String> replication(@RequestBody  BachtReplicationDTO bachtReplicationDTO) {
 
         S3JobManifestGenerator s3JobManifestGenerator = S3JobManifestGenerator.builder()
                 .filter(
@@ -40,7 +33,7 @@ public class ClientAWSController {
                                 .createdBefore(Instant.now())
                                 .build()
                 )
-                .sourceBucket(bucketSource)
+                .sourceBucket(bachtReplicationDTO.getBucketSource())
                 .build();
 
         JobManifestGenerator manifestGenerator = JobManifestGenerator
@@ -50,7 +43,7 @@ public class ClientAWSController {
         S3ReplicateObjectOperation s3ReplicateObjectOperation = S3ReplicateObjectOperation.builder().build();
 
         JobReport jobReport = JobReport.builder()
-                .bucket(bucketInventory)
+                .bucket(bachtReplicationDTO.getBucketInventory())
                 .prefix("reports")
                 .format("Report_CSV_20180820")
                 .enabled(true)
@@ -59,7 +52,7 @@ public class ClientAWSController {
 
 
         CreateJobRequest createJobRequest = CreateJobRequest.builder()
-                .accountId(accountId)
+                .accountId(bachtReplicationDTO.getAccountId())
                 .operation(JobOperation.builder().s3ReplicateObject(s3ReplicateObjectOperation).build())
                 .manifestGenerator(manifestGenerator)
                 .clientRequestToken(UUID.randomUUID().toString())
@@ -70,18 +63,16 @@ public class ClientAWSController {
                 .roleArn("arn:aws:iam::374834910945:role/service-role/s3crr_role_for_agnaldo.anjos-dados-01") // Role com as permissões necessárias
                 .build();
 
-        //S3ControlClient s3Control = S3ControlClient.builder().build();
-
         CreateJobResponse createJobResponse = s3Control.createJob(createJobRequest);
 
         System.out.println("Job ID: " + createJobResponse.jobId());
 
-        waitForJobCompletion(createJobResponse.jobId());
+        waitForJobCompletion(bachtReplicationDTO.getAccountId(), createJobResponse.jobId());
 
         return ResponseEntity.ok("Sucess - Job ID: " + createJobResponse.jobId());
     }
 
-    private void waitForJobCompletion(String jobId) {
+    private void waitForJobCompletion(final String accountId, final String jobId) {
         DescribeJobRequest describeRequest;
         DescribeJobResponse describeResponse;
         JobStatus status;
