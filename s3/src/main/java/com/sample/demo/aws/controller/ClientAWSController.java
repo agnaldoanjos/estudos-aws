@@ -2,9 +2,7 @@ package com.sample.demo.aws.controller;
 
 import com.sample.demo.aws.dto.BachtReplicationDTO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +21,7 @@ public class ClientAWSController {
     private final S3ControlClient s3Control;
 
     @PostMapping("/sync")
-    public ResponseEntity<String> replication(@RequestBody  BachtReplicationDTO bachtReplicationDTO) {
+    public ResponseEntity<String> s3BatchPreplication(@RequestBody  BachtReplicationDTO bachtReplicationDTO) {
 
         S3JobManifestGenerator s3JobManifestGenerator = S3JobManifestGenerator.builder()
                 .filter(
