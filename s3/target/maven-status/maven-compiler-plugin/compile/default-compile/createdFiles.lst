@@ -1,0 +1,16 @@
+com\sample\demo\aws\AwsApplication.class
+com\sample\demo\aws\dto\S3ReplicaJobDTO$S3ReplicaJobDTOBuilder.class
+com\sample\demo\aws\dto\S3ReplicaJobDTO.class
+com\sample\demo\aws\dto\MessageResponseDTO.class
+com\sample\demo\aws\util\Utils.class
+com\sample\demo\aws\dto\DataSyncRequestDTO$DataSyncRequestDTOBuilder.class
+com\sample\demo\aws\config\ConfigAWS.class
+com\sample\demo\aws\dto\ReplicationStatusRequestDTO$ReplicationStatusRequestDTOBuilder.class
+com\sample\demo\aws\dto\MessageResponseDTO$MessageResponseDTOBuilder.class
+com\sample\demo\aws\dto\BachtReplicationRequestDTO.class
+com\sample\demo\aws\dto\ResponseDataDTO.class
+com\sample\demo\aws\dto\ReplicationStatusRequestDTO.class
+com\sample\demo\aws\controller\ClientAWSController.class
+com\sample\demo\aws\dto\DataSyncRequestDTO.class
+com\sample\demo\aws\service\S3Service.class
+com\sample\demo\aws\config\OpenApiConfig.class
