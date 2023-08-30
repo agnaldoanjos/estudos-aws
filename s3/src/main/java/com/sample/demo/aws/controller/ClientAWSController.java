@@ -1,102 +1,68 @@
 package com.sample.demo.aws.controller;
 
-import com.sample.demo.aws.dto.BachtReplicationDTO;
+import com.sample.demo.aws.dto.BachtReplicationRequestDTO;
+import com.sample.demo.aws.dto.DataSyncRequestDTO;
+import com.sample.demo.aws.dto.MessageResponseDTO;
+import com.sample.demo.aws.dto.ReplicationStatusRequestDTO;
+import com.sample.demo.aws.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import software.amazon.awssdk.services.s3control.S3ControlClient;
-import software.amazon.awssdk.services.s3control.model.*;
-
-import java.time.Instant;
-import java.util.UUID;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/was/s3")
 @RequiredArgsConstructor
 public class ClientAWSController {
 
-    private final S3ControlClient s3Control;
+    private final S3Service s3Service;
 
-    @PostMapping("/sync")
-    public ResponseEntity<String> s3BatchPreplication(@RequestBody  BachtReplicationDTO bachtReplicationDTO) {
+    @PostMapping("/batch-replication")
+    public ResponseEntity<MessageResponseDTO> s3BatchPreplication(@RequestBody BachtReplicationRequestDTO bachtReplicationRequestDTO) {
 
-        S3JobManifestGenerator s3JobManifestGenerator = S3JobManifestGenerator.builder()
-                .filter(
-                        JobManifestGeneratorFilter.builder()
-                                .objectReplicationStatuses(ReplicationStatus.COMPLETED)// REPLICA, NONE, UNKNOWN_TO_SDK_VERSION, FAILED
-                                .eligibleForReplication(true)
-                                .createdBefore(Instant.now())
-                                .build()
-                )
-                .sourceBucket(bachtReplicationDTO.getBucketSource())
-                .build();
+        MessageResponseDTO messageResponseDTO = s3Service.batchPreplication(bachtReplicationRequestDTO);
 
-        JobManifestGenerator manifestGenerator = JobManifestGenerator
-                .fromS3JobManifestGenerator(s3JobManifestGenerator);
-
-
-        S3ReplicateObjectOperation s3ReplicateObjectOperation = S3ReplicateObjectOperation.builder().build();
-
-        JobReport jobReport = JobReport.builder()
-                .bucket(bachtReplicationDTO.getBucketInventory())
-                .prefix("reports")
-                .format("Report_CSV_20180820")
-                .enabled(true)
-                .reportScope("AllTasks") //AllTasks | FailedTasksOnly
-                .build();
-
-
-        CreateJobRequest createJobRequest = CreateJobRequest.builder()
-                .accountId(bachtReplicationDTO.getAccountId())
-                .operation(JobOperation.builder().s3ReplicateObject(s3ReplicateObjectOperation).build())
-                .manifestGenerator(manifestGenerator)
-                .clientRequestToken(UUID.randomUUID().toString())
-                .confirmationRequired(Boolean.FALSE)
-                .description("Exemplo de sincronismo de replicacao")
-                .report(jobReport)
-                .priority(44)
-                .roleArn("arn:aws:iam::374834910945:role/service-role/s3crr_role_for_agnaldo.anjos-dados-01") // Role com as permissões necessárias
-                .build();
-
-        CreateJobResponse createJobResponse = s3Control.createJob(createJobRequest);
-
-        System.out.println("Job ID: " + createJobResponse.jobId());
-
-        waitForJobCompletion(bachtReplicationDTO.getAccountId(), createJobResponse.jobId());
-
-        return ResponseEntity.ok("Sucess - Job ID: " + createJobResponse.jobId());
+        return ResponseEntity.ok(messageResponseDTO);
     }
 
-    private void waitForJobCompletion(final String accountId, final String jobId) {
-        DescribeJobRequest describeRequest;
-        DescribeJobResponse describeResponse;
-        JobStatus status;
+    @PostMapping("/replication-status")
+    public ResponseEntity<MessageResponseDTO> replicationStatus(@RequestBody ReplicationStatusRequestDTO replicationStatusRequestDTO) {
 
-        // Aguarde o trabalho ser concluído
-        do {
-            // Aguarde um período antes de consultar novamente para não sobrecarregar o serviço
-            try {
-                Thread.sleep(60000); // Espera 60 segundos
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        MessageResponseDTO messageResponseDTO = s3Service.replicationStatus(replicationStatusRequestDTO);
+
+        return ResponseEntity.ok(messageResponseDTO);
+    }
+
+    @PostMapping("/data-sync")
+    public ResponseEntity<MessageResponseDTO> replicationStatus(@RequestBody DataSyncRequestDTO dataSyncRequestDTO) {
+
+        /*
+            Sample value
+            {
+              "account": "374834910945",
+              "role": "arn:aws:iam::374834910945:role/sample-role-batch-s3",
+              "sourceBucketName": "arn:aws:s3:::agnaldo.anjos-dados-02",
+              "sourceRegion": "us-east-1",
+              "targetBucketName": "arn:aws:s3:::agnaldo.anjos-dados-03",
+              "targetRegion": "us-east-2"
             }
 
-            // Consulte o status atual do trabalho
-            describeRequest = DescribeJobRequest.builder()
-                    .accountId(accountId)
-                    .jobId(jobId)
-                    .build();
-            describeResponse = s3Control.describeJob(describeRequest);
-            status = describeResponse.job().status();
+            Configuring AWS DataSync transfers with Amazon S3
+            https://docs.aws.amazon.com/datasync/latest/userguide/create-s3-location.html#create-s3-location-s3-requests
 
-            System.out.println("Current job status: " + status);
-        } while (status == JobStatus.PREPARING || status == JobStatus.ACTIVE);
+            Creating an AWS DataSync task with the AWS CLI
+            https://docs.aws.amazon.com/datasync/latest/userguide/create-task-cli.html
 
-        // Depois que sairmos do loop, o trabalho estará em um estado finalizado (completo, falho, cancelado, etc.)
-        System.out.println("Job finished with status: " + status);
+            Create a source location for AWS DataSync
+            https://docs.aws.amazon.com/datasync/latest/userguide/configure-source-location.html
+
+            Provide temporary credentials to the AWS SDK for Java
+            https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html
+
+         */
+
+        MessageResponseDTO messageResponseDTO = s3Service.dataSync(dataSyncRequestDTO);
+
+        return ResponseEntity.ok(messageResponseDTO);
     }
 
 }
